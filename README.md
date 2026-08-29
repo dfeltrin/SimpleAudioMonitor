@@ -4,7 +4,7 @@ A compact macOS input monitor with a low-latency direct audio path. It is intend
 
 ## Why
 
-Many musicians—guitarists in particular—connect an electric instrument to an audio interface, then discover that macOS does not automatically route that live input to their speakers or headphones. Without a DAW, amp simulator, or dedicated monitoring app, the result is often silence.
+Many musicians—guitarists in particular—connect an electric instrument or a digital pedalboard directly to the input channels of the audio interface they use with their Mac. They then discover that macOS does not automatically route that live input to their speakers or headphones. Without a DAW, amp simulator, or dedicated monitoring app, the result is often silence.
 
 Simple Audio Monitor provides that missing monitoring path: choose the interface input, enable monitoring, and set a comfortable listening level. You can then open any separate audio player, browser, or backing-track app and play along with a song, lesson, or other audio while hearing your instrument at the same time.
 
