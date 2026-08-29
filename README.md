@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Assets/AppIcon.png" width="144" alt="Simple Audio Monitor icon">
+</p>
+
 # Simple Audio Monitor
 
 A compact macOS input monitor with a low-latency direct audio path. It is intended to work like enabling input monitoring on a DAW track, without recording or effects.
