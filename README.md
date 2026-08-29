@@ -2,6 +2,10 @@
 
 A compact macOS input monitor with a low-latency direct audio path. It is intended to work like enabling input monitoring on a DAW track, without recording or effects.
 
+## Interface
+
+![Simple Audio Monitor interface](Assets/app-screenshot.png)
+
 ## Features
 
 - Select any Core Audio input device and refresh the device list on demand.
