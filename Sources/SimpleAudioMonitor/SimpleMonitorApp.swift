@@ -23,7 +23,7 @@ struct SimpleAudioMonitorApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(audioMonitor)
-                .frame(minWidth: 238, minHeight: 650)
+                .frame(minWidth: 210, minHeight: 700)
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)

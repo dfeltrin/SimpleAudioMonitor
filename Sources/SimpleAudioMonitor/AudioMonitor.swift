@@ -180,6 +180,9 @@ final class AudioMonitor: ObservableObject {
     }
 
     var canLinkStereo: Bool { availableChannels.count >= 2 }
+    var selectedDeviceName: String {
+        devices.first(where: { $0.id == selectedDeviceID })?.name ?? "No device selected"
+    }
 
     private func report(_ message: String) {
         errorMessage = message
@@ -244,7 +247,12 @@ private extension AudioMonitor {
         guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &ids) == noErr else { return [] }
         return ids.compactMap { id in
             let channels = inputChannelCount(id)
-            guard channels > 0 else { return nil }
+            let transportType = deviceTransportType(id)
+            // Aggregate and virtual devices are often routing helpers (for example
+            // loopback drivers), not an instrument input the user wants to monitor.
+            guard channels > 0,
+                  transportType != kAudioDeviceTransportTypeAggregate,
+                  transportType != kAudioDeviceTransportTypeVirtual else { return nil }
             return InputDevice(id: id, uid: deviceUID(id), name: deviceName(id), inputChannels: channels)
         }
         .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
@@ -264,6 +272,18 @@ private extension AudioMonitor {
         let list = bufferList.assumingMemoryBound(to: AudioBufferList.self)
         let buffers = UnsafeMutableAudioBufferListPointer(list)
         return buffers.reduce(0) { $0 + Int($1.mNumberChannels) }
+    }
+
+    static func deviceTransportType(_ id: AudioDeviceID) -> UInt32 {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyTransportType,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var transportType: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        let status = AudioObjectGetPropertyData(id, &address, 0, nil, &size, &transportType)
+        return status == noErr ? transportType : 0
     }
 
     static func deviceName(_ id: AudioDeviceID) -> String {

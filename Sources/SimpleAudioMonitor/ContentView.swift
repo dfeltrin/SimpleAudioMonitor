@@ -10,11 +10,12 @@ struct ContentView: View {
                 topRail
                 Divider().overlay(Color.white.opacity(0.12))
                 inputStrip
-                    .padding(.horizontal, 24).padding(.vertical, 20)
+                    .padding(.horizontal, 18).padding(.vertical, 20)
                 Divider().overlay(Color.white.opacity(0.1))
                 levelSection
-                    .padding(.horizontal, 24).padding(.vertical, 17)
+                    .padding(.horizontal, 18).padding(.vertical, 17)
                 Spacer(minLength: 0)
+                routingReadout
                 Divider().overlay(Color.black.opacity(0.55))
                 bottomRail
             }
@@ -22,8 +23,9 @@ struct ContentView: View {
             .padding(.bottom, 8)
             .padding(.top, 16)
         }
-        .frame(width: 238, height: 650)
+        .frame(width: 210, height: 700)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay { ConsoleRailScrews().allowsHitTesting(false) }
         .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.22), lineWidth: 1) }
         .shadow(color: .black.opacity(0.55), radius: 22, y: 12)
         .task { monitor.refreshDevices() }
@@ -41,7 +43,6 @@ struct ContentView: View {
                 StatusLight(isOn: monitor.isMonitoring, label: "SIG")
                 StatusLight(isOn: true, label: "PWR", color: .orange)
             }
-            RackScrew()
         }
         .padding(.horizontal, 14).frame(height: 51)
     }
@@ -72,10 +73,16 @@ struct ContentView: View {
                     .help("Refresh audio input devices")
                 }
                 .padding(.horizontal, 10).padding(.vertical, 7).background(insetMetal, in: RoundedRectangle(cornerRadius: 5))
+                Text(monitor.selectedDeviceName)
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .foregroundStyle(.white.opacity(0.42))
+                    .help(monitor.selectedDeviceName)
             }
             VStack(alignment: .leading, spacing: 9) {
                 controlLabel("INPUT MODE")
-                HStack(spacing: 7) {
+                HStack(spacing: 8) {
                     modeIconButton(icon: "1.circle", label: "Mono", selected: !monitor.linkedStereo) { monitor.linkedStereo = false; monitor.applyChannelConfiguration() }
                     modeIconButton(icon: "rectangle.split.2x1", label: "Stereo", selected: monitor.linkedStereo, disabled: !monitor.canLinkStereo) { monitor.linkedStereo = true; monitor.applyChannelConfiguration() }
                 }
@@ -97,36 +104,54 @@ struct ContentView: View {
     private var levelSection: some View {
         VStack(spacing: 9) {
             sectionLabel("MONITOR LEVEL")
-            HStack(alignment: .center, spacing: 13) {
-                HStack(spacing: 11) {
+            HStack(alignment: .center, spacing: 8) {
+                HStack(spacing: 8) {
                     LEDLevelMeter(level: monitor.leftOutputLevel, channel: "L")
                     LEDLevelMeter(level: monitor.rightOutputLevel, channel: "R")
                 }
                 .frame(height: 175)
                 MixerFader(value: $monitor.volume)
-                    .frame(width: 108, height: 175)
+                    .frame(width: 96, height: 175)
                     .onChange(of: monitor.volume) { _, _ in monitor.applyVolume() }
             }
             Button { monitor.toggleMonitoring() } label: {
                 HStack(spacing: 8) {
-                    Circle().fill(monitor.isMonitoring ? .red : .green).frame(width: 7, height: 7)
-                    Text(monitor.isMonitoring ? "STOP MONITOR" : "ENGAGE MONITOR").font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(0.8)
+                    Image(systemName: monitor.isMonitoring ? "stop.fill" : "power")
+                        .font(.system(size: 10, weight: .black))
+                        .frame(width: 12)
+                    Text(monitor.isMonitoring ? "STOP MONITOR" : "ENABLE MONITOR").font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(0.8)
                 }
                 .foregroundStyle(.white.opacity(0.93)).frame(maxWidth: .infinity).frame(height: 37)
-                .background(monitor.isMonitoring ? Color.red.opacity(0.35) : Color.green.opacity(0.24), in: RoundedRectangle(cornerRadius: 5))
+                .background(monitor.isMonitoring ? Color.red.opacity(0.38) : Color.green.opacity(0.28), in: RoundedRectangle(cornerRadius: 5))
                 .overlay { RoundedRectangle(cornerRadius: 5).stroke(.white.opacity(0.2), lineWidth: 1) }
             }.buttonStyle(.plain)
         }.frame(maxWidth: .infinity)
     }
 
+    private var routingReadout: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "arrow.right.circle.fill")
+                .foregroundStyle(.cyan.opacity(0.82))
+            Text("DIRECT INPUT MONITORING")
+                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                .tracking(0.6)
+                .foregroundStyle(.white.opacity(0.4))
+            Spacer()
+            Text(monitor.linkedStereo ? "L/R" : "MONO")
+                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                .foregroundStyle(.cyan.opacity(0.82))
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 8)
+    }
+
     private var bottomRail: some View {
         HStack {
-            Text(monitor.linkedStereo ? "CH \(monitor.selectedChannel)+\(monitor.selectedChannel + 1)  •  ST LINK" : "CH \(monitor.selectedChannel)  •  MONO")
+            Text(monitor.linkedStereo ? "CH \(monitor.selectedChannel)+\(monitor.selectedChannel + 1)  •  ST" : "CH \(monitor.selectedChannel)  •  M")
                 .font(.system(size: 9, weight: .bold, design: .monospaced)).tracking(0.8).foregroundStyle(.cyan.opacity(0.9))
             Spacer()
-            Text(monitor.isMonitoring ? "●  LIVE" : "○  STANDBY").font(.system(size: 9, weight: .bold, design: .monospaced)).foregroundStyle(monitor.isMonitoring ? .green : .white.opacity(0.38))
-            RackScrew()
-        }.padding(.horizontal, 17).frame(height: 48)
+            Text(monitor.isMonitoring ? "● LIVE" : "○ STD").font(.system(size: 9, weight: .bold, design: .monospaced)).foregroundStyle(monitor.isMonitoring ? .green : .white.opacity(0.38))
+        }.padding(.horizontal, 17).frame(height: 44)
     }
 
     private var insetMetal: LinearGradient { LinearGradient(colors: [.black.opacity(0.55), .white.opacity(0.06)], startPoint: .top, endPoint: .bottom) }
@@ -134,8 +159,12 @@ struct ContentView: View {
     private func controlLabel(_ title: String) -> some View { Text(title).font(.system(size: 9, weight: .bold, design: .monospaced)).tracking(1).foregroundStyle(.white.opacity(0.45)) }
     private func modeIconButton(icon: String, label: String, selected: Bool, disabled: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: 15, weight: .bold)).foregroundStyle(selected ? .black : .white.opacity(disabled ? 0.22 : 0.66))
-                .frame(width: 42, height: 31).background(selected ? Color.cyan.opacity(0.92) : Color.black.opacity(0.32), in: RoundedRectangle(cornerRadius: 4))
+            VStack(spacing: 1) {
+                Image(systemName: icon).font(.system(size: 14, weight: .bold))
+                Text(label.uppercased()).font(.system(size: 6, weight: .black, design: .monospaced)).tracking(0.3)
+            }
+            .foregroundStyle(selected ? .black : .white.opacity(disabled ? 0.22 : 0.66))
+                .frame(width: 48, height: 38).background(selected ? Color.cyan.opacity(0.92) : Color.black.opacity(0.32), in: RoundedRectangle(cornerRadius: 4))
                 .overlay { RoundedRectangle(cornerRadius: 4).stroke(selected ? .cyan.opacity(0.8) : .white.opacity(0.13), lineWidth: 1) }
         }.buttonStyle(.plain).disabled(disabled).help(label)
     }
@@ -155,8 +184,45 @@ private struct RackBackground: View {
             .overlay { LinearGradient(colors: [.white.opacity(0.13), .clear, .black.opacity(0.42)], startPoint: .top, endPoint: .bottom) }
     }
 }
-private struct RackScrew: View {
-    var body: some View { ZStack { Circle().fill(.black.opacity(0.65)); Circle().stroke(.white.opacity(0.16), lineWidth: 1); Capsule().fill(.black.opacity(0.7)).frame(width: 9, height: 2).rotationEffect(.degrees(-28)) }.frame(width: 14, height: 14) }
+private struct ConsoleRailScrews: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let rightEdge = proxy.size.width - 10
+            let lowerRail = proxy.size.height - 88
+            ZStack {
+                ConsoleScrew(angle: -32).position(x: 10, y: 74)
+                ConsoleScrew(angle: 32).position(x: rightEdge, y: 74)
+                ConsoleScrew(angle: 32, emphasized: true).position(x: 10, y: lowerRail)
+                ConsoleScrew(angle: -32, emphasized: true).position(x: rightEdge, y: lowerRail)
+            }
+        }
+    }
+}
+
+private struct ConsoleScrew: View {
+    let angle: Double
+    var emphasized = false
+
+    var body: some View {
+        ZStack {
+            if emphasized {
+                Circle().fill(.white.opacity(0.16)).frame(width: 17, height: 17)
+            }
+            Circle()
+                .fill(RadialGradient(colors: [.white.opacity(emphasized ? 0.62 : 0.34), .gray.opacity(emphasized ? 0.8 : 0.55), .black.opacity(0.92)], center: .topLeading, startRadius: 1, endRadius: 8))
+            Circle().stroke(emphasized ? .white.opacity(0.4) : .black.opacity(0.85), lineWidth: 1.5)
+            Capsule()
+                .fill(.black.opacity(0.85))
+                .frame(width: 10, height: 2.2)
+                .rotationEffect(.degrees(angle))
+            Capsule()
+                .fill(.white.opacity(0.2))
+                .frame(width: 7, height: 0.7)
+                .rotationEffect(.degrees(angle - 1))
+        }
+        .frame(width: 15, height: 15)
+        .shadow(color: .black.opacity(0.85), radius: 1.5, y: 1)
+    }
 }
 private struct StatusLight: View {
     let isOn: Bool; let label: String; var color: Color = .green
@@ -176,7 +242,7 @@ private struct LEDLevelMeter: View {
                     let isLit = level >= threshold * 0.68
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(segmentColor(index, isLit: isLit))
-                        .frame(width: 24, height: 8)
+                        .frame(width: 20, height: 8)
                         .shadow(color: isLit ? segmentBaseColor(index).opacity(0.8) : .clear, radius: 4)
                 }
             }
@@ -191,7 +257,7 @@ private struct LEDLevelMeter: View {
     }
 
     private func segmentColor(_ index: Int, isLit: Bool) -> Color {
-        isLit ? segmentBaseColor(index) : segmentBaseColor(index).opacity(0.14)
+        isLit ? segmentBaseColor(index) : segmentBaseColor(index).opacity(0.24)
     }
 }
 private struct MixerFader: View {
@@ -225,8 +291,8 @@ private struct MixerFader: View {
                 VStack(spacing: 8) {
                     Text("+6"); Text("0"); Text("−6"); Text("−∞")
                 }
-                .font(.system(size: 7, weight: .bold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.42))
+                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.58))
             }
             .padding(.vertical, 12)
             .offset(y: -10)
