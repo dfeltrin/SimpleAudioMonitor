@@ -124,7 +124,8 @@ struct ContentView: View {
                 .foregroundStyle(.white.opacity(0.93)).frame(maxWidth: .infinity).frame(height: 37)
                 .background(monitor.isMonitoring ? Color.red.opacity(0.38) : Color.green.opacity(0.28), in: RoundedRectangle(cornerRadius: 5))
                 .overlay { RoundedRectangle(cornerRadius: 5).stroke(.white.opacity(0.2), lineWidth: 1) }
-            }.buttonStyle(.plain)
+            }
+            .buttonStyle(.plain)
         }.frame(maxWidth: .infinity)
     }
 
@@ -188,7 +189,8 @@ private struct ConsoleRailScrews: View {
     var body: some View {
         GeometryReader { proxy in
             let rightEdge = proxy.size.width - 10
-            let lowerRail = proxy.size.height - 88
+            // Centre the lower screw pair on the enable button.
+            let lowerRail = proxy.size.height - 102
             ZStack {
                 ConsoleScrew(angle: -32).position(x: 10, y: 74)
                 ConsoleScrew(angle: 32).position(x: rightEdge, y: 74)
