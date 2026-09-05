@@ -10,17 +10,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // SwiftUI creates the window during launch; wait for the next run-loop turn
         // so its final content size is available before positioning it.
         DispatchQueue.main.async { [weak self] in
-            self?.moveMainWindowToTopRight()
+            self?.moveMainWindowToTopRight(attemptsRemaining: 10)
         }
     }
 
     @MainActor
-    private func moveMainWindowToTopRight() {
-        guard let window = NSApp.windows.first(where: { $0.isVisible }) ?? NSApp.windows.first,
-              let screen = window.screen ?? NSScreen.main ?? NSScreen.screens.first
-        else {
+    private func moveMainWindowToTopRight(attemptsRemaining: Int) {
+        guard let window = NSApp.windows.first(where: { $0.isVisible }) ?? NSApp.windows.first else {
+            guard attemptsRemaining > 0 else { return }
+            DispatchQueue.main.async { [weak self] in
+                self?.moveMainWindowToTopRight(attemptsRemaining: attemptsRemaining - 1)
+            }
             return
         }
+
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
 
         let visibleFrame = screen.visibleFrame
         let windowFrame = window.frame

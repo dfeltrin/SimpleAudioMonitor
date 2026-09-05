@@ -14,7 +14,7 @@ Simple Audio Monitor provides that missing monitoring path: choose the interface
 
 ## Interface
 
-![Simple Audio Monitor interface](Assets/app-screenshot-v1.1.2.png)
+![Simple Audio Monitor interface](Assets/app-screenshot-v1.2.1.png)
 
 ## Features
 
