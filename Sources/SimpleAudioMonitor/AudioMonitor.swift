@@ -1,4 +1,5 @@
 import AVFoundation
+import AppKit
 import CoreAudio
 import Foundation
 
@@ -35,6 +36,7 @@ final class AudioMonitor: ObservableObject {
     private let monitorMixer = AVAudioMixerNode()
     private let meterState = MeterState()
     private var meterRefreshTimer: Timer?
+    private var sleepObserver: NSObjectProtocol?
     private let defaults = UserDefaults.standard
 
     init() {
@@ -49,6 +51,15 @@ final class AudioMonitor: ObservableObject {
         meterRefreshTimer = Timer.scheduledTimer(withTimeInterval: 1 / 30, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.refreshMeter()
+            }
+        }
+        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.stopForSystemSleep()
             }
         }
     }
@@ -85,6 +96,11 @@ final class AudioMonitor: ObservableObject {
 
     func toggleMonitoring() {
         isMonitoring ? stop() : start()
+    }
+
+    func stopForSystemSleep() {
+        guard isMonitoring else { return }
+        stop()
     }
 
     private func start() {
