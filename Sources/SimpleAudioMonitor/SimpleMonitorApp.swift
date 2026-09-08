@@ -10,16 +10,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // SwiftUI creates the window during launch; wait for the next run-loop turn
         // so its final content size is available before positioning it.
         DispatchQueue.main.async { [weak self] in
-            self?.moveMainWindowToTopRight(attemptsRemaining: 10)
+            self?.moveMainWindowToBottomRight(attemptsRemaining: 10)
         }
     }
 
     @MainActor
-    private func moveMainWindowToTopRight(attemptsRemaining: Int) {
+    private func moveMainWindowToBottomRight(attemptsRemaining: Int) {
         guard let window = NSApp.windows.first(where: { $0.isVisible }) ?? NSApp.windows.first else {
             guard attemptsRemaining > 0 else { return }
             DispatchQueue.main.async { [weak self] in
-                self?.moveMainWindowToTopRight(attemptsRemaining: attemptsRemaining - 1)
+                self?.moveMainWindowToBottomRight(attemptsRemaining: attemptsRemaining - 1)
             }
             return
         }
@@ -31,9 +31,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.setFrameOrigin(
             NSPoint(
                 x: visibleFrame.maxX - windowFrame.width,
-                y: visibleFrame.maxY - windowFrame.height
+                y: visibleFrame.minY
             )
         )
+    }
+
+    @MainActor
+    func anchorMainWindowToBottomRight() {
+        DispatchQueue.main.async { [weak self] in
+            self?.moveMainWindowToBottomRight(attemptsRemaining: 1)
+        }
     }
 }
 
@@ -41,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct SimpleAudioMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var audioMonitor = AudioMonitor()
+    @State private var isCollapsed = false
 
     init() {
         guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return }
@@ -58,9 +66,12 @@ struct SimpleAudioMonitorApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(isCollapsed: $isCollapsed)
                 .environmentObject(audioMonitor)
-                .frame(minWidth: 210, minHeight: 700)
+                .frame(width: isCollapsed ? 28 : 210, height: 700)
+        }
+        .onChange(of: isCollapsed) { _, _ in
+            appDelegate.anchorMainWindowToBottomRight()
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)

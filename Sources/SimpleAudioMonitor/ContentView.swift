@@ -2,8 +2,21 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var monitor: AudioMonitor
+    @Binding var isCollapsed: Bool
 
     var body: some View {
+        Group {
+            if isCollapsed {
+                collapsedHandle
+            } else {
+                monitorPanel
+            }
+        }
+        .task { monitor.refreshDevices() }
+        .alert("Audio unavailable", isPresented: $monitor.showError) { Button("OK", role: .cancel) { } } message: { Text(monitor.errorMessage) }
+    }
+
+    private var monitorPanel: some View {
         ZStack {
             RackBackground()
             VStack(spacing: 0) {
@@ -27,9 +40,41 @@ struct ContentView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay { ConsoleRailScrews().allowsHitTesting(false) }
         .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.22), lineWidth: 1) }
+        .overlay(alignment: .leading) {
+            Button { isCollapsed = true } label: {
+                DockHandle(collapsed: false)
+            }
+            .buttonStyle(.plain)
+            .help("Collapse monitor")
+        }
         .shadow(color: .black.opacity(0.55), radius: 22, y: 12)
-        .task { monitor.refreshDevices() }
-        .alert("Audio unavailable", isPresented: $monitor.showError) { Button("OK", role: .cancel) { } } message: { Text(monitor.errorMessage) }
+    }
+
+    private var collapsedHandle: some View {
+        Button { isCollapsed = false } label: {
+            ZStack {
+                LinearGradient(
+                    colors: [Color(red: 0.12, green: 0.15, blue: 0.17), Color(red: 0.025, green: 0.035, blue: 0.045)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                VStack(spacing: 0) {
+                    Capsule().fill(.cyan.opacity(0.7)).frame(width: 2, height: 70)
+                    Spacer()
+                    DockHandle(collapsed: true)
+                    Spacer()
+                    Capsule().fill(.white.opacity(0.13)).frame(width: 2, height: 70)
+                }
+            }
+            .frame(width: 28, height: 700)
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(.white.opacity(0.2), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .help("Expand monitor")
+        .shadow(color: .black.opacity(0.5), radius: 10, y: 5)
     }
 
     private var topRail: some View {
@@ -176,6 +221,42 @@ struct ContentView: View {
                 .frame(width: 30, height: 28).background(selected ? Color.cyan : Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 4))
                 .overlay { RoundedRectangle(cornerRadius: 4).stroke(.white.opacity(selected ? 0.25 : 0.12), lineWidth: 1) }
         }.buttonStyle(.plain).disabled(monitor.linkedStereo)
+    }
+}
+
+private struct DockHandle: View {
+    let collapsed: Bool
+
+    var body: some View {
+        VStack(spacing: 7) {
+            Image(systemName: collapsed ? "chevron.left" : "chevron.right")
+                .font(.system(size: 10, weight: .black))
+            HStack(spacing: 2) {
+                ForEach(0..<3, id: \.self) { _ in
+                    Circle().fill(.white.opacity(0.38)).frame(width: 2.5, height: 2.5)
+                }
+            }
+            Text(collapsed ? "OPEN" : "HIDE")
+                .font(.system(size: 5.5, weight: .black, design: .monospaced))
+                .tracking(0.6)
+                .rotationEffect(.degrees(-90))
+                .frame(height: 17)
+        }
+        .foregroundStyle(.white.opacity(0.86))
+        .frame(width: collapsed ? 23 : 18, height: collapsed ? 94 : 80)
+        .background(
+            LinearGradient(
+                colors: [.black.opacity(0.8), Color.cyan.opacity(0.14), .black.opacity(0.65)],
+                startPoint: .top,
+                endPoint: .bottom
+            ),
+            in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .stroke(.cyan.opacity(0.42), lineWidth: 1)
+        }
+        .shadow(color: .cyan.opacity(0.22), radius: 5)
     }
 }
 

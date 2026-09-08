@@ -24,6 +24,8 @@ Simple Audio Monitor provides that missing monitoring path: choose the interface
 - See independent L/R LED meters for the monitored signal.
 - Restore the last device, input mode, channel, and volume automatically at launch.
 - Stop monitoring automatically when the Mac enters sleep, preventing the audio route from resuming unexpectedly.
+- Open docked to the bottom-right corner of the main display.
+- Collapse to a slim, clickable side handle and expand it again without changing the selected monitoring setup.
 
 ## Build and run
 
