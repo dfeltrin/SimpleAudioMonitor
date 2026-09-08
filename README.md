@@ -14,18 +14,21 @@ Simple Audio Monitor provides that missing monitoring path: choose the interface
 
 ## Interface
 
-![Simple Audio Monitor interface](Assets/app-screenshot-v1.2.1.png)
+<img src="Assets/interface-preview.png" width="324" alt="Redesigned monitor panel with device, stereo channels, meters and volume fader, alongside its compact side handle">
+
+Expanded and compact interface preview, shown with example device and signal data.
 
 ## Features
 
 - Select any Core Audio input device and refresh the device list on demand.
 - Monitor one input channel in mono, or link an adjacent pair as stereo.
-- Control monitoring volume with a mixer-style fader.
+- Control monitoring volume with a mixer-style fader and a clear 0–100% scale; use the arrow keys when the fader is focused for fine adjustments.
 - See independent L/R LED meters for the monitored signal.
 - Restore the last device, input mode, channel, and volume automatically at launch.
 - Stop monitoring automatically when the Mac enters sleep, preventing the audio route from resuming unexpectedly.
 - Open docked to the bottom-right corner of the main display.
-- Collapse to a slim, clickable side handle and expand it again without changing the selected monitoring setup.
+- Collapse the 240-point-wide panel to a 28-point side handle with live status and miniature L/R meters; expand it again without interrupting monitoring.
+- Move the panel from its native title bar; fader drags remain dedicated to volume adjustment.
 
 ## Build and run
 
