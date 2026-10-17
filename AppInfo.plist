@@ -24,6 +24,8 @@
     <string>14.0</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Simple Audio Monitor needs microphone access to route your selected audio input to the output.</string>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>Simple Audio Monitor needs system audio access to control other applications’ volume separately from your instrument.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

@@ -4,6 +4,7 @@ struct ContentView: View {
     @EnvironmentObject private var monitor: AudioMonitor
     @Binding var isCollapsed: Bool
     @State private var showsDevicePicker = false
+    @StateObject private var otherApps = OtherAppsAudio()
 
     private var hasInput: Bool { !monitor.availableChannels.isEmpty }
     private var channelSummary: String {
@@ -23,6 +24,12 @@ struct ContentView: View {
         .onChange(of: monitor.selectedDeviceID) { _, _ in monitor.selectDevice() }
         .onChange(of: monitor.volume) { _, _ in monitor.applyVolume() }
         .onChange(of: isCollapsed) { _, _ in showsDevicePicker = false }
+        .alert("Other apps audio", isPresented: Binding(
+            get: { otherApps.errorMessage != nil },
+            set: { if !$0 { otherApps.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { otherApps.errorMessage = nil }
+        } message: { Text(otherApps.errorMessage ?? "") }
         .alert("Audio unavailable", isPresented: $monitor.showError) {
             Button("OK", role: .cancel) { }
         } message: { Text(monitor.errorMessage) }
@@ -30,53 +37,56 @@ struct ContentView: View {
 
     private var expandedPanel: some View {
         HStack(spacing: 0) {
-            ZStack {
-                MonitorTheme.inset.opacity(0.45)
-                DockHandle(isCollapsed: false) { isCollapsed = true }
-            }
-            .frame(width: 18)
-            .overlay(alignment: .trailing) { Rectangle().fill(MonitorTheme.border).frame(width: 1) }
+            DockHandle(isCollapsed: false) { isCollapsed = true }
+                .frame(width: 18, height: MonitorLayout.height)
             VStack(alignment: .leading, spacing: 0) {
-                header.padding(.bottom, 20)
+                header.padding(.bottom, 22)
                 inputSection
-                Rectangle().fill(MonitorTheme.border).frame(height: 1).padding(.vertical, 18)
-                outputSection
+                outputSection.padding(.top, 24)
                 Spacer(minLength: 16)
-                monitoringButton
-                footer.padding(.top, 16)
+                footer
             }
-            .padding(.horizontal, 16)
+            .padding(.leading, 10)
+            .padding(.trailing, 20)
             .padding(.top, 20)
-            .padding(.bottom, 18)
+            .padding(.bottom, 20)
         }
-        .background(LinearGradient(colors: [MonitorTheme.surface.opacity(0.55), .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
-        .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1) }
+        .background(LinearGradient(colors: [MonitorTheme.surface.opacity(0.5), .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
     }
 
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("SIMPLE AUDIO")
-                    .font(MonitorTheme.label(8)).tracking(2.2).foregroundStyle(MonitorTheme.secondary)
-                Text("Monitor")
-                    .font(.system(size: 27, weight: .semibold, design: .rounded))
-                    .tracking(-0.7).foregroundStyle(MonitorTheme.text)
+        HStack(alignment: .center) {
+            HStack(spacing: 10) {
+                Image(systemName: "waveform")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(MonitorTheme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(MonitorTheme.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("SIMPLE AUDIO").font(MonitorTheme.label(8)).tracking(1.6)
+                        .foregroundStyle(MonitorTheme.secondary)
+                    Text("Monitor").font(.system(size: 24, weight: .semibold))
+                        .tracking(-0.7).foregroundStyle(MonitorTheme.text)
+                }
             }
-            Spacer(minLength: 6)
-            Image(systemName: "waveform")
-                .font(.system(size: 21, weight: .light)).foregroundStyle(MonitorTheme.accent)
-                .frame(width: 38, height: 38)
-                .background(MonitorTheme.accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
-                .overlay { RoundedRectangle(cornerRadius: 12).stroke(MonitorTheme.accent.opacity(0.16), lineWidth: 1) }
-                .accessibilityHidden(true)
+            Spacer()
+            HStack(spacing: 5) {
+                StatusDot(isLive: monitor.isMonitoring)
+                Text(monitor.isMonitoring ? "LIVE" : "READY")
+                    .font(MonitorTheme.label(9))
+            }
+            .foregroundStyle(monitor.isMonitoring ? MonitorTheme.accent : MonitorTheme.secondary)
+            .padding(.horizontal, 9).padding(.vertical, 6)
+            .background(MonitorTheme.surface, in: Capsule())
+            .overlay { Capsule().stroke(MonitorTheme.border, lineWidth: 1) }
         }
-        .frame(height: 48)
+        .frame(height: 44)
     }
 
     private var inputSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                SectionLabel(title: "INPUT", number: "01")
+                SectionLabel(title: "Audio input")
                 Spacer()
                 Button { monitor.refreshDevices() } label: {
                     Image(systemName: "arrow.clockwise")
@@ -95,43 +105,39 @@ struct ContentView: View {
             .padding(3)
             .background(MonitorTheme.inset, in: RoundedRectangle(cornerRadius: 8))
             .padding(.top, 12)
-            HStack {
-                Text(monitor.linkedStereo ? "CHANNEL PAIR" : "CHANNEL")
-                    .foregroundStyle(MonitorTheme.secondary)
-                Spacer()
-                Text(monitor.linkedStereo ? "LINKED" : "MONO").foregroundStyle(MonitorTheme.accent)
-            }
-            .font(MonitorTheme.label(8)).tracking(1)
-            .padding(.top, 16).padding(.bottom, 8)
-            if hasInput {
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(spacing: 5) {
-                        ForEach(monitor.availableChannels, id: \.self) { channel in channelButton(channel) }
+            HStack(spacing: 10) {
+                Text(monitor.linkedStereo ? "Linked pair" : "Channel")
+                    .font(.system(size: 11)).foregroundStyle(MonitorTheme.secondary)
+                Spacer(minLength: 0)
+                if hasInput {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 5) {
+                            ForEach(monitor.availableChannels, id: \.self) { channel in channelButton(channel) }
+                        }
                     }
-                    .padding(.bottom, 3)
+                    .frame(maxWidth: 160).frame(height: 29)
+                } else {
+                    Text("No input connected").font(.system(size: 11)).foregroundStyle(MonitorTheme.secondary)
                 }
-                .frame(height: 34)
-            } else {
-                Text("Connect a device, then refresh.")
-                    .font(.system(size: 10)).foregroundStyle(MonitorTheme.secondary).frame(height: 34)
             }
+            .padding(.top, 12)
         }
     }
 
     private var deviceMenu: some View {
         Button { showsDevicePicker.toggle() } label: {
             HStack(spacing: 8) {
-                Image(systemName: "hifispeaker")
+                Image(systemName: "cable.connector")
                     .font(.system(size: 13)).foregroundStyle(MonitorTheme.accent)
                 Text(hasInput ? monitor.selectedDeviceName : "Connect an input")
-                    .font(.system(size: 12, weight: .medium)).lineLimit(2)
+                    .font(.system(size: 13, weight: .medium)).lineLimit(2)
                     .multilineTextAlignment(.leading).truncationMode(.middle)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 8, weight: .semibold)).foregroundStyle(MonitorTheme.secondary)
             }
             .foregroundStyle(MonitorTheme.text).padding(.horizontal, 11).frame(height: 48)
-            .background(MonitorTheme.inset, in: RoundedRectangle(cornerRadius: 9))
+            .background(MonitorTheme.surface, in: RoundedRectangle(cornerRadius: 9))
             .overlay { RoundedRectangle(cornerRadius: 9).stroke(MonitorTheme.border, lineWidth: 1) }
             .contentShape(RoundedRectangle(cornerRadius: 9))
         }
@@ -218,48 +224,82 @@ struct ContentView: View {
     }
 
     private var outputSection: some View {
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                SectionLabel(title: "MONITOR", number: "02")
-                Spacer(minLength: 4)
-                Text(monitor.volume, format: .percent.precision(.fractionLength(0)))
-                    .font(.system(size: 22, weight: .medium, design: .rounded))
-                    .monospacedDigit().foregroundStyle(MonitorTheme.text).accessibilityLabel("Monitor volume")
+                SectionLabel(title: "Listening mix")
+                Spacer()
+                Text("Independent levels").font(.system(size: 10)).foregroundStyle(MonitorTheme.secondary)
             }
-            HStack(alignment: .top, spacing: 12) {
-                StereoMeters(left: monitor.leftOutputLevel, right: monitor.rightOutputLevel).frame(width: 69)
-                Rectangle().fill(MonitorTheme.border).frame(width: 1, height: 164)
-                MixerFader(value: $monitor.volume).frame(maxWidth: .infinity)
+            HStack(alignment: .top, spacing: 10) {
+                volumeStrip(title: "Monitor", subtitle: "Your instrument", icon: "waveform",
+                            value: $monitor.volume, color: MonitorTheme.accent,
+                            enabled: true, active: monitor.isMonitoring,
+                            canToggle: hasInput || monitor.isMonitoring,
+                            action: { monitor.toggleMonitoring() })
+                volumeStrip(title: "Other apps", subtitle: "Music & playback", icon: "music.note",
+                            value: $otherApps.volume, color: MonitorTheme.apps,
+                            enabled: otherApps.isEnabled, active: otherApps.isEnabled,
+                            canToggle: otherApps.isSupported,
+                            action: { otherApps.toggle() })
             }
-            .frame(height: 184)
         }
     }
 
-    private var monitoringButton: some View {
-        Button { monitor.toggleMonitoring() } label: {
-            HStack(spacing: 8) {
-                Image(systemName: monitor.isMonitoring ? "stop.fill" : "power").font(.system(size: 12, weight: .semibold))
-                Text(monitor.isMonitoring ? "Stop monitor" : "Enable monitor").font(.system(size: 12, weight: .semibold))
+    private func volumeStrip(title: String, subtitle: String, icon: String, value: Binding<Float>,
+                             color: Color, enabled: Bool, active: Bool, canToggle: Bool,
+                             action: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 7) {
+                Image(systemName: icon).font(.system(size: 12, weight: .semibold)).foregroundStyle(color)
+                Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(MonitorTheme.text)
             }
-            .foregroundStyle(monitor.isMonitoring ? MonitorTheme.red : MonitorTheme.inset)
-            .frame(maxWidth: .infinity).frame(height: 43)
-            .background(monitor.isMonitoring ? MonitorTheme.red.opacity(0.12) : MonitorTheme.accent, in: RoundedRectangle(cornerRadius: 10))
-            .overlay { RoundedRectangle(cornerRadius: 10).stroke(monitor.isMonitoring ? MonitorTheme.red.opacity(0.35) : MonitorTheme.accent, lineWidth: 1) }
-            .contentShape(RoundedRectangle(cornerRadius: 10))
+            Text(subtitle).font(.system(size: 10)).foregroundStyle(MonitorTheme.secondary).padding(.top, 5)
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text("\(Int((value.wrappedValue * 100).rounded()))")
+                    .font(.system(size: 32, weight: .light, design: .rounded)).monospacedDigit()
+                Text("%").font(.system(size: 12, weight: .medium)).foregroundStyle(MonitorTheme.secondary)
+            }
+            .foregroundStyle(enabled ? MonitorTheme.text : MonitorTheme.secondary)
+            .padding(.top, 16).padding(.bottom, 14)
+            MixerFader(value: value, accessibilityTitle: title + " volume", color: color)
+                .disabled(!enabled).opacity(enabled ? 1 : 0.45)
+            Button(action: action) {
+                HStack(spacing: 6) {
+                    Image(systemName: active ? "pause.fill" : "power").font(.system(size: 9, weight: .bold))
+                    Text(active ? "Enabled" : "Enable").font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(active ? color : MonitorTheme.text)
+                .frame(maxWidth: .infinity).frame(height: 32)
+                .background(active ? color.opacity(0.13) : Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                .overlay { RoundedRectangle(cornerRadius: 8).stroke(active ? color.opacity(0.25) : MonitorTheme.border, lineWidth: 1) }
+                .contentShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(MonitorButtonStyle()).disabled(!canToggle)
+            .padding(.top, 16)
+            .accessibilityLabel((active ? "Disable " : "Enable ") + title.lowercased())
+            .accessibilityAddTraits(active ? .isSelected : [])
+            .help(!canToggle && title == "Other apps" ? "Requires macOS 14.2 or later" : (active ? "Disable " : "Enable ") + title.lowercased())
         }
-        .buttonStyle(MonitorButtonStyle(prominent: true)).disabled(!hasInput && !monitor.isMonitoring)
-        .help(monitor.isMonitoring ? "Stop routing input audio" : "Route input audio to the output")
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LinearGradient(colors: [color.opacity(0.055), MonitorTheme.surface], startPoint: .top, endPoint: .bottom), in: RoundedRectangle(cornerRadius: 16))
+        .overlay { RoundedRectangle(cornerRadius: 16).stroke(active ? color.opacity(0.28) : MonitorTheme.border, lineWidth: 1) }
     }
 
     private var footer: some View {
-        HStack(spacing: 5) {
-            StatusDot(isLive: monitor.isMonitoring)
-            Text(monitor.isMonitoring ? "LIVE" : "STANDBY")
-                .foregroundStyle(monitor.isMonitoring ? MonitorTheme.live : MonitorTheme.secondary)
-            Spacer(minLength: 2)
-            Text(channelSummary).foregroundStyle(MonitorTheme.secondary)
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Text("SIGNAL").font(MonitorTheme.label(8)).tracking(0.7).foregroundStyle(MonitorTheme.secondary)
+                SignalMeter(label: "L", level: monitor.leftOutputLevel)
+                SignalMeter(label: "R", level: monitor.rightOutputLevel)
+            }
+            HStack(spacing: 4) {
+                Text(monitor.selectedDeviceName).lineLimit(1).truncationMode(.middle)
+                Spacer(minLength: 6)
+                Text(channelSummary)
+            }
+            .font(.system(size: 10)).foregroundStyle(MonitorTheme.secondary)
         }
-        .font(MonitorTheme.label(8)).tracking(0.6).frame(height: 14)
     }
 
     private var compactPanel: some View {
@@ -287,14 +327,9 @@ struct ContentView: View {
 
 private struct SectionLabel: View {
     let title: String
-    let number: String
     var body: some View {
-        HStack(spacing: 7) {
-            Text(number).foregroundStyle(MonitorTheme.accent.opacity(0.8))
-            Text(title).foregroundStyle(MonitorTheme.secondary)
-        }
-        .font(MonitorTheme.label(9)).tracking(1.1)
-        .accessibilityElement(children: .ignore).accessibilityLabel(title).accessibilityAddTraits(.isHeader)
+        Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(MonitorTheme.text)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -334,40 +369,23 @@ private struct DockHandle: View {
     }
 }
 
-private struct StereoMeters: View {
-    let left: Float
-    let right: Float
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 6) {
-                LEDLevelMeter(level: left)
-                LEDLevelMeter(level: right)
-            }
-            .padding(.horizontal, 12).padding(.vertical, 10)
-            .background(MonitorTheme.inset, in: RoundedRectangle(cornerRadius: 8))
-            .overlay { RoundedRectangle(cornerRadius: 8).stroke(MonitorTheme.border, lineWidth: 1) }
-            HStack(spacing: 18) { Text("L"); Text("R") }
-                .font(MonitorTheme.label(8)).foregroundStyle(MonitorTheme.secondary)
-        }
-        .accessibilityElement(children: .ignore).accessibilityLabel("Left and right monitor levels")
-        .accessibilityValue("\(Int(left * 100)), \(Int(right * 100)) percent")
-    }
-}
-
-private struct LEDLevelMeter: View {
+private struct SignalMeter: View {
+    let label: String
     let level: Float
-    private let segments = 18
     var body: some View {
-        VStack(spacing: 2) {
-            ForEach((0..<segments).reversed(), id: \.self) { index in
-                // Relative signal indicators; these are not calibrated dBFS meters.
-                let lit = level >= Float(index + 1) / Float(segments)
-                let color = index >= 16 ? MonitorTheme.red : (index >= 13 ? MonitorTheme.amber : MonitorTheme.accent)
-                RoundedRectangle(cornerRadius: 1).fill(color.opacity(lit ? 1 : 0.12))
-                    .frame(width: 14, height: 6)
-                    .shadow(color: lit ? color.opacity(0.2) : .clear, radius: 2)
+        HStack(spacing: 5) {
+            Text(label).font(MonitorTheme.label(8)).foregroundStyle(MonitorTheme.secondary)
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(MonitorTheme.accent.opacity(0.1))
+                    Capsule().fill(level > 0.9 ? MonitorTheme.amber : MonitorTheme.accent)
+                        .frame(width: max(0, min(1, CGFloat(level))) * geometry.size.width)
+                }
             }
+            .frame(height: 4)
         }
+        .accessibilityElement(children: .ignore).accessibilityLabel(label + " monitor level")
+        .accessibilityValue("\(Int((level * 100).rounded())) percent")
     }
 }
 
@@ -384,64 +402,61 @@ private struct CompactMeter: View {
 
 private struct MixerFader: View {
     @Binding var value: Float
+    var accessibilityTitle = "Monitor volume"
+    var color = MonitorTheme.accent
     @State private var startValue: Float?
+    @State private var isHovered = false
     @FocusState private var isFocused: Bool
-    private let trackHeight: CGFloat = 138
+    private let trackHeight: CGFloat = 144
 
     var body: some View {
-        VStack(spacing: 8) {
-            GeometryReader { geometry in
-                ZStack(alignment: .topLeading) {
-                    ForEach(0..<5, id: \.self) { index in
-                        let y = 12 + CGFloat(index) * trackHeight / 4
-                        Path { path in
-                            path.move(to: CGPoint(x: 2, y: y))
-                            path.addLine(to: CGPoint(x: geometry.size.width - 23, y: y))
-                        }
-                        .stroke(MonitorTheme.secondary.opacity(0.18), lineWidth: 1)
-                        Text(["100", "75", "50", "25", "0"][index])
-                            .font(MonitorTheme.label(7)).foregroundStyle(MonitorTheme.secondary)
-                            .frame(width: 20, alignment: .trailing)
-                            .position(x: geometry.size.width - 10, y: y)
+        GeometryReader { geometry in
+            let trackX = (geometry.size.width - 22) / 2
+            ZStack(alignment: .topLeading) {
+                ForEach(0..<5, id: \.self) { index in
+                    let y = 14 + CGFloat(index) * trackHeight / 4
+                    Path { path in
+                        path.move(to: CGPoint(x: 3, y: y))
+                        path.addLine(to: CGPoint(x: geometry.size.width - 25, y: y))
                     }
-                    Capsule().fill(MonitorTheme.inset).frame(width: 6, height: trackHeight + 8)
-                        .position(x: 26, y: 12 + trackHeight / 2)
-                    Capsule().fill(MonitorTheme.accent.opacity(0.35))
-                        .frame(width: 2, height: CGFloat(value) * trackHeight)
-                        .position(x: 26, y: 12 + trackHeight - CGFloat(value) * trackHeight / 2)
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(LinearGradient(colors: [Color(white: 0.79), Color(white: 0.48), Color(white: 0.66)], startPoint: .top, endPoint: .bottom))
-                        .frame(width: 42, height: 23)
-                        .overlay {
-                            VStack(spacing: 3) {
-                                Rectangle().fill(Color.black.opacity(0.15)).frame(height: 1)
-                                Rectangle().fill(MonitorTheme.inset).frame(height: 2)
-                                Rectangle().fill(Color.white.opacity(0.22)).frame(height: 1)
-                            }
-                            .padding(.horizontal, 5)
-                        }
-                        .overlay { RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.4), lineWidth: 0.5) }
-                        .shadow(color: .black.opacity(0.6), radius: 3, y: 2)
-                        .position(x: 26, y: 12 + (1 - CGFloat(value)) * trackHeight)
+                    .stroke(MonitorTheme.secondary.opacity(0.14), lineWidth: 1)
+                    Text(["100", "75", "50", "25", "0"][index])
+                        .font(MonitorTheme.label(8)).foregroundStyle(MonitorTheme.secondary)
+                        .frame(width: 22, alignment: .trailing)
+                        .position(x: geometry.size.width - 10, y: y)
                 }
+                Capsule().fill(MonitorTheme.inset).frame(width: 8, height: trackHeight + 4)
+                    .position(x: trackX, y: 14 + trackHeight / 2)
+                Capsule().fill(color.opacity(0.65))
+                    .frame(width: 3, height: CGFloat(value) * trackHeight)
+                    .position(x: trackX, y: 14 + trackHeight - CGFloat(value) * trackHeight / 2)
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(LinearGradient(colors: [Color(white: 0.92), Color(white: 0.69)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: 40, height: 27)
+                    .overlay {
+                        Capsule().fill(color.opacity(0.95)).frame(width: 24, height: 3)
+                            .shadow(color: color.opacity(0.35), radius: 3)
+                    }
+                    .overlay { RoundedRectangle(cornerRadius: 7).stroke(Color.white.opacity(0.6), lineWidth: 0.5) }
+                    .shadow(color: .black.opacity(0.45), radius: isHovered ? 6 : 3, y: 3)
+                    .position(x: trackX, y: 14 + (1 - CGFloat(value)) * trackHeight)
             }
-            .frame(height: 162).contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 0).onChanged { gesture in
-                if startValue == nil { startValue = value }
-                value = min(1, max(0, (startValue ?? value) - Float(gesture.translation.height / trackHeight)))
-            }.onEnded { _ in startValue = nil })
-            Text("VOLUME").font(MonitorTheme.label(8)).tracking(0.7).foregroundStyle(MonitorTheme.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 7)
         }
+        .frame(height: 172).contentShape(Rectangle())
+        .gesture(DragGesture(minimumDistance: 0).onChanged { gesture in
+            if startValue == nil { startValue = value }
+            value = min(1, max(0, (startValue ?? value) - Float(gesture.translation.height / trackHeight)))
+        }.onEnded { _ in startValue = nil })
+        .onHover { isHovered = $0 }
         .focusable().focused($isFocused)
         .onKeyPress(.upArrow) { adjust(0.01); return .handled }
         .onKeyPress(.downArrow) { adjust(-0.01); return .handled }
         .overlay {
-            RoundedRectangle(cornerRadius: 6).stroke(isFocused ? MonitorTheme.accent.opacity(0.6) : .clear, lineWidth: 1)
-                .padding(-3).allowsHitTesting(false)
+            RoundedRectangle(cornerRadius: 9).stroke(isFocused ? color.opacity(0.65) : .clear, lineWidth: 1)
+                .padding(-4).allowsHitTesting(false)
         }
-        .accessibilityElement(children: .ignore).accessibilityLabel("Monitor volume")
-        .accessibilityValue("\(Int(value * 100)) percent")
+        .accessibilityElement(children: .ignore).accessibilityLabel(accessibilityTitle)
+        .accessibilityValue("\(Int((value * 100).rounded())) percent")
         .accessibilityAdjustableAction { direction in adjust(direction == .increment ? 0.05 : -0.05) }
         .help("Drag to adjust volume. Arrow keys adjust by 1%.")
     }

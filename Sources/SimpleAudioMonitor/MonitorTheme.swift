@@ -1,9 +1,9 @@
 import SwiftUI
 
 enum MonitorLayout {
-    static let expandedWidth: CGFloat = 240
+    static let expandedWidth: CGFloat = 360
     static let collapsedWidth: CGFloat = 28
-    static let height: CGFloat = 700
+    static let height: CGFloat = 740
 }
 
 enum MonitorTheme {
@@ -13,6 +13,7 @@ enum MonitorTheme {
     static let text = Color(red: 0.93, green: 0.95, blue: 0.96)
     static let secondary = Color(red: 0.61, green: 0.66, blue: 0.70)
     static let accent = Color(red: 0.39, green: 0.87, blue: 0.84)
+    static let apps = Color(red: 0.69, green: 0.65, blue: 1.0)
     static let live = Color(red: 0.57, green: 0.88, blue: 0.53)
     static let amber = Color(red: 0.97, green: 0.73, blue: 0.36)
     static let red = Color(red: 1.0, green: 0.43, blue: 0.40)

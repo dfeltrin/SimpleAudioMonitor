@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 
-swift build -c release
+swift build -c release "$@"
 
 app_path=".build/SimpleAudioMonitor.app"
 rm -rf "$app_path"

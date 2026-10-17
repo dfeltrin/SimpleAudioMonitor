@@ -23,11 +23,13 @@ Expanded and compact interface preview, shown with example device and signal dat
 - Select any Core Audio input device and refresh the device list on demand.
 - Monitor one input channel in mono, or link an adjacent pair as stereo.
 - Control monitoring volume with a mixer-style fader and a clear 0–100% scale; use the arrow keys when the fader is focused for fine adjustments.
-- See independent L/R LED meters for the monitored signal.
+- Independently control other applications on the current default output with a second fader (macOS 14.2+). Press **Enable** in the **Other apps** panel and allow system audio access when prompted; disabling it restores normal playback. The monitor is excluded from this control.
+- Read independent L/R signal meters in the footer.
+- Balance the two sources in separate color-coded mixer panels: turquoise for the instrument, violet for other apps, each with its own enable button.
 - Restore the last device, input mode, channel, and volume automatically at launch.
 - Stop monitoring automatically when the Mac enters sleep, preventing the audio route from resuming unexpectedly.
 - Open docked to the bottom-right corner of the main display.
-- Collapse the 240-point-wide panel to a 28-point side handle with live status and miniature L/R meters; expand it again without interrupting monitoring.
+- Collapse the 360-point-wide panel to a 28-point side handle with live status and miniature L/R meters; expand it again without interrupting monitoring.
 - Move the panel from its native title bar; fader drags remain dedicated to volume adjustment.
 
 ## Build and run
@@ -47,3 +49,5 @@ On the first launch of a newly signed app identity, allow microphone access in m
 ## Notes
 
 The monitor route has no recording or effects: `input → mixer → output`. The L/R meters analyse the incoming signal and apply the fader level for display; they do not account for later system-volume changes or processing outside the app.
+
+Other-apps control uses a private Core Audio process tap and aggregate device; it never changes the system output selection or hardware volume. Only apps playing on the default output's first stream are controlled. Apps explicitly routed to a different output remain independent. The monitor keeps its original audio path. System audio permission is separate from microphone permission. Other-apps control starts disabled and stops on sleep, output changes, or app exit; enable it again after changing output. Its fader level is saved, but capture is never started automatically. If capture permission is denied, enable it in **System Settings → Privacy & Security → Screen & System Audio Recording** and try again. Hardware and system volume still affect the final mix.
