@@ -68,3 +68,15 @@ Only applications playing through the current default output's first stream are 
 Other-apps control stops when the output device or its sample rate changes. Enable it again to use the new output. Both routes also stop on app exit, and neither starts automatically at launch.
 
 If access is denied, check **System Settings → Privacy & Security → Microphone** for instrument monitoring, or **Screen & System Audio Recording** for other-apps control, then try enabling the corresponding panel again. Permission labels may vary with the macOS version.
+
+## Privacy
+
+Audio is processed locally for live playback. The app does not save audio recordings, send audio over the network, or include analytics or telemetry.
+
+Preferences are stored locally using macOS `UserDefaults`: the selected input device's identifier, channel, mono/stereo mode, and both volume levels. Microphone and system audio access are managed by macOS permissions.
+
+## Release packaging
+
+The five ZIP downloads published for v1.0, v1.1, v1.1.1, v1.1.2, and v1.4.0 contain build-machine paths in their executables, including the local account and project directory. They also include macOS `__MACOSX` / `._*` metadata files. These downloads have not yet been repackaged to remove those details.
+
+Before publishing a new download, remove build-path references and unnecessary debug information from the executable, then sign the final app bundle. Create the ZIP without macOS extended attributes or AppleDouble metadata, and inspect the resulting archive and executable for local paths or private files. A release build alone does not guarantee that build-machine paths are absent.
